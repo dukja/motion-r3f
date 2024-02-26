@@ -7,7 +7,7 @@ import { IsEnteredAtom } from "../contexts";
 // eslint-disable-next-line no-unused-vars
 import React, { useState, useEffect } from "react";
 
-export const Loader = ({ isCompleted }) => {
+export const Loader = ({isCompleted}) => {
   const [isEntered, setIsEntered] = useRecoilState(IsEnteredAtom);
   const [localProgress, setLocalProgress] = useState(0);
 
