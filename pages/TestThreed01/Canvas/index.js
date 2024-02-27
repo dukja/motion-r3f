@@ -3,7 +3,7 @@ import React, { useEffect, useState, Suspense,lazy} from 'react'
 import * as THREE from "three"
 import { Canvas } from '@react-three/fiber'
 import { useControls } from 'leva';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls ,ScrollControls} from '@react-three/drei';
 import {useRecoilValue} from 'recoil';
 
 import {Test} from '../Object/Test';
@@ -46,14 +46,17 @@ export default function MainCanvas() {
     }}
       shadows ={true}
       gl={{antialias:true}}
-      scene={{background: new THREE.Color('#000000')}}
+      scene={{background: new THREE.Color('#fff')}}
       // onCreated={({ gl }) => { gl.setClearColor(new THREE.Color('#000000')); }}
     >
+      <ScrollControls pages={isEntered ? 8:0}>
+
       <Suspense fallback={<Test />}>
         <Object />
       </Suspense>
       {/* <OrbitControls /> */}
       {/* <gridHelper/>   */}
+      </ScrollControls>
     </Canvas>
     </>
   )

@@ -38,11 +38,11 @@ export default function Home() {
             </Button>
             <Button
               component={Link}
-              href="/TestThreed"
+              href="/TestThreed01"
               variant="contained"
               sx={{ ml: 2 }}
             >
-              Test
+              Test01
             </Button>
           </Box>
         </Box>
