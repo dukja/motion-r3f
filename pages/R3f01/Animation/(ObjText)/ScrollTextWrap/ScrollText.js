@@ -9,6 +9,8 @@ const LateralInnerContainer = styled.div`
   display: flex;
   position: absolute;
   left: 50vw;
+  white-space: nowrap;
+  line-height: 2;
 `;
 
 const LateralInnerMovement = () => {

@@ -24,7 +24,9 @@ const ScrollTextWrap = ({ scrollTriggerRef }) => {
       const scrollingElement = scrollingRef.current;
 
       if (scrollingElement) {
-        const speedFactor = 1; // 이 값을 조정하여 속도를 조절할 수 있습니다.
+        const contentLength = contentRef.scrollHeight;
+        const scrollingLength = scrollingElement.scrollWidth;
+        const speedFactor = scrollingLength / contentLength;
 
         ScrollTrigger.create({
           trigger: contentRef,
