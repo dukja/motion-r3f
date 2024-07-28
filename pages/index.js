@@ -1,16 +1,10 @@
-import {
-  Box,
-  Container,
-  Button,
-  Link
-} from "@mui/material";
+import { Box, Container, Button, Link } from "@mui/material";
 
 import BaseLayout from "../src/layout/BaseLayout";
 
-
 export default function Home() {
   return (
-      <Container maxWidth="lg">
+    <Container maxWidth="lg">
       <Box display="flex" alignItems="center">
         <Box
           display="flex"
@@ -30,7 +24,7 @@ export default function Home() {
             </Button>
             <Button
               component={Link}
-              href="/Threed"
+              href="/R3f01"
               variant="contained"
               sx={{ ml: 2 }}
             >
@@ -38,7 +32,7 @@ export default function Home() {
             </Button>
             <Button
               component={Link}
-              href="/TestThreed01"
+              href="/R3f02"
               variant="contained"
               sx={{ ml: 2 }}
             >
@@ -47,7 +41,7 @@ export default function Home() {
           </Box>
         </Box>
       </Box>
-      </Container>
+    </Container>
   );
 }
 

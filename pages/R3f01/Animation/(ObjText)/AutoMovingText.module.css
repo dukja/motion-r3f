@@ -1,0 +1,22 @@
+.autoMovingTextContainer {
+  position: fixed;
+  left: 0;
+  bottom: 0; /* 화면 하단에 위치 */
+  height: 50px; /* 컨테이너의 높이를 50px로 설정 */
+  width: 100%; /* 화면 전체 너비 */
+  overflow: hidden;
+  display: flex;
+  flex-direction: row; /* 가로 방향으로 변경 */
+  align-items: center; /* 세로 중앙 정렬 */
+  z-index: 1000; /* 다른 요소들 위에 표시되도록 z-index 설정 */
+  /*화면 표시자*/
+  border: 2px solid red;
+}
+
+.autoMovingText {
+  white-space: nowrap;
+  font-size: 24px; /* 원하는 크기로 조정 */
+  /*화면 표시자*/
+  border: 2px solid green;
+  padding: 0 20px; /* 좌우 여백 추가 */
+}

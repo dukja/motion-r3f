@@ -1,0 +1,17 @@
+.autoMovingTextContainer {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  border: 2px solid red;
+}
+
+.autoMovingText {
+  transform: rotate(-90deg);
+  transform-origin: left center;
+  white-space: nowrap;
+  font-size: 24px; /* 원하는 크기로 조정 */
+}

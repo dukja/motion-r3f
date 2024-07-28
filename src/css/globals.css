@@ -2,47 +2,50 @@
 @tailwind components;
 @tailwind utilities; */
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
-}
-*{
+* {
   box-sizing: border-box;
 }
-html, body, #root {
-  margin:0;
-  padding:0;
-  width:100%;
-  height: 100%;
-}
-
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-}
-
-canvas{
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
   width: 100%;
   height: 100%;
 }
 
+.canvas3D {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  pointer-events: none;
+  background-color: transparent;
+  overflow: hidden;
+}
+.content {
+  width: 100%;
+  height: auto;
+  z-index: 1;
+}
+.section {
+  width: 100%;
+  height: 100vh;
+  border: 5px solid black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-/* @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-} */
+.canvas3DImg {
+  position: absolute;
+  width: 100vw;
+  height: 100%;
+  overflow: visible;
+  z-index: 4;
+  pointer-events: none;
+}
