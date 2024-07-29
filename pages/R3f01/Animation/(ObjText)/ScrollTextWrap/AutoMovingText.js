@@ -17,7 +17,7 @@ const InnerText = styled.div`
   white-space: nowrap;
   text-align: center;
   text-transform: uppercase;
-  line-height: 2;
+  line-height: 50px;
 `;
 
 const textContent = "© Welcome to silencio store";

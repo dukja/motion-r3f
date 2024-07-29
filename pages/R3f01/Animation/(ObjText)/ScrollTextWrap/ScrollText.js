@@ -10,7 +10,7 @@ const LateralInnerContainer = styled.div`
   position: absolute;
   left: 50vw;
   white-space: nowrap;
-  line-height: 2;
+  line-height: 50px;
 `;
 
 const LateralInnerMovement = () => {

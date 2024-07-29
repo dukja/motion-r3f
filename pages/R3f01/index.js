@@ -30,7 +30,7 @@ const AnimationElement = styled.div`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  border: 10px solid red;
+  border: 1px solid red;
   pointer-events: auto;
   transform: rotate(-90deg);
   transform-origin: left top;
