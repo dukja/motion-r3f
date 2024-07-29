@@ -54,7 +54,7 @@ function MainApp() {
             camera={{ position: [0, 0, 10] }}
             gl={{ antialias: false }}
           >
-            <ScrollControls>
+            <ScrollControls pages={0}>
               <Scroll>
                 <MainCanvas scrollTriggerRef={scrollTriggerRef} />
                 <gridHelper args={[40, 40]} rotation-x={[Math.PI / 2]} />
