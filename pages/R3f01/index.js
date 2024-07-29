@@ -13,7 +13,7 @@ import ObjText01 from "./Animation/(ObjText)/ObjText01";
 const MainCanvas = lazy(() => import("./Canvas/index"));
 
 const UIContainer = styled.div`
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
@@ -48,6 +48,12 @@ function MainApp() {
   return (
     <>
       <Suspense fallback={<div>loading</div>}>
+        <UIContainer>
+          <AnimationElement>
+            <ScrollTextWrap />
+          </AnimationElement>
+        </UIContainer>
+
         <div className="canvas3D">
           <Canvas
             shadows
@@ -60,22 +66,14 @@ function MainApp() {
                 <gridHelper args={[40, 40]} rotation-x={[Math.PI / 2]} />
               </Scroll>
               <Scroll html>
-                <UIContainer>
-                  <AnimationElement>
-                    <ScrollTextWrap scrollTriggerRef={scrollTriggerRef} />
-                  </AnimationElement>
-                  <InteractiveElement>
-                    <button onClick={() => console.log("Button clicked")}>
-                      Interact
-                    </button>
-                  </InteractiveElement>
-                </UIContainer>
+                <div>1</div>
               </Scroll>
             </ScrollControls>
           </Canvas>
+
+          <ScrollTrig ref={scrollTriggerRef} />
         </div>
       </Suspense>
-      <ScrollTrig ref={scrollTriggerRef} />
     </>
   );
 }

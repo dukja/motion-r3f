@@ -1,8 +1,12 @@
 import React, { useEffect, useRef } from "react";
 import gsap from "gsap";
+import ScrollTrigger from "gsap/dist/ScrollTrigger";
+import { useFrame } from "@react-three/fiber";
 import styled from "styled-components";
 import AutoMovingText from "./AutoMovingText";
 import ScrollText from "./ScrollText";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const ScrollingDiv = styled.div`
   position: relative;
@@ -12,25 +16,26 @@ const ScrollingDiv = styled.div`
   display: flex;
 `;
 
-const ScrollTextWrap = () => {
+const ScrollTextWrap = ({ scrollTriggerRef }) => {
   const scrollingRef = useRef(null);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY;
+  useFrame(() => {
+    if (scrollTriggerRef && scrollTriggerRef.current) {
+      const contentRef = scrollTriggerRef.current.getContentRef();
       const scrollingElement = scrollingRef.current;
 
       if (scrollingElement) {
-        const speedFactor = 1; // 이 값을 조정하여 속도를 조절할 수 있습니다.
+        const contentLength = contentRef.scrollHeight;
+        const scrollingLength = scrollingElement.scrollWidth;
+        const speedFactor = scrollingLength / contentLength;
+        const scrollPosition = window.scrollY;
+
         gsap.set(scrollingElement, {
-          x: -scrollPosition * speedFactor, // 반대 방향으로 움직이도록 설정
+          x: -scrollPosition * speedFactor,
         });
       }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    }
+  });
 
   return (
     <ScrollingDiv ref={scrollingRef}>
