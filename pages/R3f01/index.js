@@ -8,7 +8,7 @@ import ObjImg from "./Object/(Img)/ObjImg";
 import Common from "./Canvas/Common";
 import styled from "styled-components";
 import ScrollTextWrap from "./Animation/(ObjText)/ScrollTextWrap";
-import TimelineBoxWrap from "./Object/(Text)";
+import TimelineBoxWrap from "./Object/(Text)/TimelineBoxWrap";
 
 const MainCanvas = lazy(() => import("./Canvas/index"));
 

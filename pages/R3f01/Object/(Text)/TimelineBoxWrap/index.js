@@ -83,11 +83,9 @@ export default function TimelineBoxWrap({ scrollTriggerRef }) {
   return (
     <Container>
       <Box ref={boxRef}>
-        <ObjText01 />
-      </Box>
-      <Box ref={boxRef}>
         <Items />
       </Box>
+      <Box ref={boxRef}></Box>
     </Container>
   );
 }
