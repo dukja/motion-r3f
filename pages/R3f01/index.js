@@ -9,6 +9,7 @@ import Common from "./Canvas/Common";
 import styled from "styled-components";
 import ScrollTextWrap from "./Animation/(ObjText)/ScrollTextWrap";
 import ObjText01 from "./Animation/(ObjText)/ObjText01";
+import TimelineBoxWrap from "./Animation/(ObjItem)/TimelineBoxWrap";
 
 const MainCanvas = lazy(() => import("./Canvas/index"));
 
@@ -67,6 +68,7 @@ function MainApp() {
               </Scroll>
               <Scroll html>
                 <div>1</div>
+                <TimelineBoxWrap scrollTriggerRef={scrollTriggerRef} />
               </Scroll>
             </ScrollControls>
           </Canvas>
