@@ -11,7 +11,7 @@ import styled from "styled-components";
 
 // gsap.registerPlugin(ScrollTrigger);
 
-function ObjText01() {
+function Items() {
   const { viewport } = useThree();
 
   const s11textRef = useRef();
@@ -158,7 +158,7 @@ function ObjText01() {
   );
 }
 
-export default ObjText01;
+export default Items;
 
 const ScrollSt = styled(Scroll)`
   width: 100%;

@@ -7,49 +7,74 @@ import { Html, Scroll, ScrollControls } from "@react-three/drei";
 import ObjImg from "./Object/(ObjImg)/ObjImg";
 import Common from "./Canvas/Common";
 import styled from "styled-components";
-import AutoMovingText from "./Animation/(ObjText)/AutoMovingText";
+import ScrollTextWrap from "./Animation/(ObjText)/ScrollTextWrap";
+import TimelineBoxWrap from "./Animation/";
 
 const MainCanvas = lazy(() => import("./Canvas/index"));
+
+const UIContainer = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+`;
+
+const AnimationElement = styled.div`
+  position: absolute;
+  top: 100vh;
+  width: 100vh;
+  height: 50px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 1px solid red;
+  pointer-events: auto;
+  transform: rotate(-90deg);
+  transform-origin: left top;
+`;
+const InteractiveElement = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: auto;
+`;
+
 function MainApp() {
   const scrollTriggerRef = useRef();
 
   return (
     <>
       <Suspense fallback={<div>loading</div>}>
-        {/* <div className="canvas3DImg">
+        <UIContainer>
+          <AnimationElement>
+            <ScrollTextWrap />
+          </AnimationElement>
+        </UIContainer>
+
+        <div className="canvas3D">
           <Canvas
             shadows
             camera={{ position: [0, 0, 10] }}
             gl={{ antialias: false }}
           >
-            <ScrollControls damping={4} pages={3}>
+            <ScrollControls pages={0}>
               <Scroll>
-                <ObjImg />
-                <Common />
+                <MainCanvas scrollTriggerRef={scrollTriggerRef} />
+                <gridHelper args={[40, 40]} rotation-x={[Math.PI / 2]} />
+              </Scroll>
+              <Scroll html>
+                <div>1</div>
+                <TimelineBoxWrap scrollTriggerRef={scrollTriggerRef} />
               </Scroll>
             </ScrollControls>
           </Canvas>
-        </div> */}
-        <div className="canvas3D">
-          <div>1</div>
-          <Canvas
-            shadows
-            camera={{ position: [0, 0, 10] }}
-            gl={{ antialias: false }}
-          >
-            <MainCanvas scrollTriggerRef={scrollTriggerRef} />
-            <gridHelper args={[40, 40]} rotation-x={[Math.PI / 2]} />
-            <Html>
-              <div style={{ position: "absolute", top: 0, left: 0 }}>
-                <div>
-                  <AutoMovingText />
-                </div>
-              </div>
-            </Html>
-          </Canvas>
+
+          <ScrollTrig ref={scrollTriggerRef} />
         </div>
       </Suspense>
-      <ScrollTrig ref={scrollTriggerRef} />
     </>
   );
 }

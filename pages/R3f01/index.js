@@ -4,11 +4,11 @@ import React, { Suspense, lazy, useRef } from "react";
 import ScrollTrig from "./Canvas/ScrollTrig";
 import { Canvas } from "@react-three/fiber";
 import { Html, Scroll, ScrollControls } from "@react-three/drei";
-import ObjImg from "./Object/(ObjImg)/ObjImg";
+import ObjImg from "./Object/(Img)/ObjImg";
 import Common from "./Canvas/Common";
 import styled from "styled-components";
 import ScrollTextWrap from "./Animation/(ObjText)/ScrollTextWrap";
-import ObjText01 from "./Animation/(ObjText)/ObjText01";
+import TimelineBoxWrap from "./Object/(Text)";
 
 const MainCanvas = lazy(() => import("./Canvas/index"));
 
@@ -67,6 +67,7 @@ function MainApp() {
               </Scroll>
               <Scroll html>
                 <div>1</div>
+                <TimelineBoxWrap scrollTriggerRef={scrollTriggerRef} />
               </Scroll>
             </ScrollControls>
           </Canvas>
