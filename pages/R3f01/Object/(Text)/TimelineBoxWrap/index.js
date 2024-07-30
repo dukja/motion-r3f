@@ -1,4 +1,3 @@
-// pages/Animation/(ObjItem)/TimelineBoxWrap.js
 import React, { useEffect, useRef } from "react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/dist/ScrollTrigger";
@@ -14,18 +13,18 @@ const Container = styled.div`
   right: 0;
   width: 100vw;
   display: flex;
-  border: 10px solid green;
+  border: 20px solid green;
+  flex-direction: column;
 `;
 
 const Box = styled.div`
   position: relative;
-  width: 100%;
+  width: 100vw;
   height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 24px;
-  border: 10px solid skyblue;
+  border: 30px solid blue;
 `;
 
 const Text = styled.div`
@@ -83,9 +82,11 @@ export default function TimelineBoxWrap({ scrollTriggerRef }) {
   return (
     <Container>
       <Box ref={boxRef}>
-        <Items />
+        <div>1</div>
       </Box>
-      <Box ref={boxRef}></Box>
+      <Box ref={boxRef}>
+        <div>1</div>
+      </Box>
     </Container>
   );
 }
