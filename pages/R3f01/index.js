@@ -34,6 +34,11 @@ const AnimationElement = styled.div`
   transform: rotate(-90deg);
   transform-origin: left top;
 `;
+const ScrollStyled = styled(Scroll)`
+  width: 100%;
+  height: 100%;
+  overflow: scroll;
+`;
 
 function MainApp() {
   const scrollTriggerRef = useRef();
@@ -61,17 +66,11 @@ function MainApp() {
               </ScrollStyled>
             </ScrollControls>
           </Canvas>
-
           <ScrollTrig ref={scrollTriggerRef} />
         </div>
       </Suspense>
     </>
   );
 }
-const ScrollStyled = styled(Scroll)`
-  width: 100%;
-  height: 100%;
-  overflow: scroll;
-`;
 
 export default MainApp;
