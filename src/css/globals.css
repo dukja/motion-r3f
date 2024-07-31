@@ -25,7 +25,6 @@ body,
   z-index: 3;
   pointer-events: none;
   background-color: transparent;
-  overflow: hidden;
   border: 1px solid pink;
 }
 .content {

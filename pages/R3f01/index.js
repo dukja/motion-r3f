@@ -4,11 +4,10 @@ import React, { Suspense, lazy, useRef } from "react";
 import ScrollTrig from "./Canvas/ScrollTrig";
 import { Canvas } from "@react-three/fiber";
 import { Html, Scroll, ScrollControls } from "@react-three/drei";
-import ObjImg from "./Object/(Img)/ObjImg";
-import Common from "./Canvas/Common";
+
 import styled from "styled-components";
 import ScrollTextWrap from "./Animation/(ObjText)/ScrollTextWrap";
-import TimelineBoxWrap from "./Object/(Text)/TimelineBoxWrap";
+import TimelineBoxWrap from "./Object/(Text)/TimelineSectionWrap";
 
 const MainCanvas = lazy(() => import("./Canvas/index"));
 
@@ -35,12 +34,6 @@ const AnimationElement = styled.div`
   transform: rotate(-90deg);
   transform-origin: left top;
 `;
-const InteractiveElement = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: auto;
-`;
 
 function MainApp() {
   const scrollTriggerRef = useRef();
@@ -61,14 +54,11 @@ function MainApp() {
             gl={{ antialias: false }}
           >
             <ScrollControls pages={0}>
-              <Scroll>
-                <MainCanvas scrollTriggerRef={scrollTriggerRef} />
-                <gridHelper args={[40, 40]} rotation-x={[Math.PI / 2]} />
-              </Scroll>
-              <Scroll html>
-                <div>1</div>
+              <MainCanvas scrollTriggerRef={scrollTriggerRef} />
+              <gridHelper args={[40, 40]} rotation-x={[Math.PI / 2]} />
+              <ScrollStyled html>
                 <TimelineBoxWrap scrollTriggerRef={scrollTriggerRef} />
-              </Scroll>
+              </ScrollStyled>
             </ScrollControls>
           </Canvas>
 
@@ -78,5 +68,10 @@ function MainApp() {
     </>
   );
 }
+const ScrollStyled = styled(Scroll)`
+  width: 100%;
+  height: 100%;
+  overflow: scroll;
+`;
 
 export default MainApp;

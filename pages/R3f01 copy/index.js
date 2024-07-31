@@ -4,8 +4,6 @@ import React, { Suspense, lazy, useRef } from "react";
 import ScrollTrig from "./Canvas/ScrollTrig";
 import { Canvas } from "@react-three/fiber";
 import { Html, Scroll, ScrollControls } from "@react-three/drei";
-import ObjImg from "./Object/(ObjImg)/ObjImg";
-import Common from "./Canvas/Common";
 import styled from "styled-components";
 import ScrollTextWrap from "./Animation/(ObjText)/ScrollTextWrap";
 import TimelineBoxWrap from "./Animation/";
