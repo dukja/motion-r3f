@@ -1,40 +1,33 @@
 import React, { useEffect, useRef } from "react";
 import styled from "styled-components";
 
-const Container = styled.div`
-  position: relative;
+const ContentDiv = styled.div`
+  position: absolute;
+  top: 0;
+  border: 1px solid yellow;
+  display: flex;
 `;
 
-const Box = styled.div`
-  position: relative;
-  width: 100vw;
+const SectionDiv = styled.div`
   height: 100vh;
+  width: 100vw;
   display: flex;
   justify-content: center;
   align-items: center;
-  border: 2px solid blue;
+  border: 10px solid red;
+  font-size: 24px;
 `;
 
 export default function TimelineBoxWrap() {
   const boxRef = useRef([]);
 
   return (
-    <Container>
-      <Box ref={(el) => (boxRef.current[0] = el)}>
-        <div>1</div>
-      </Box>
-      <Box ref={(el) => (boxRef.current[1] = el)}>
-        <div>2</div>
-      </Box>
-      <Box ref={(el) => (boxRef.current[2] = el)}>
-        <div>3</div>
-      </Box>
-      <Box ref={(el) => (boxRef.current[2] = el)}>
-        <div>4</div>
-      </Box>
-      <Box ref={(el) => (boxRef.current[2] = el)}>
-        <div>5</div>
-      </Box>
-    </Container>
+    <ContentDiv>
+      <SectionDiv>1</SectionDiv>
+      <SectionDiv>1</SectionDiv>
+      <SectionDiv>1</SectionDiv>
+      <SectionDiv>1</SectionDiv>
+      <SectionDiv>1</SectionDiv>
+    </ContentDiv>
   );
 }

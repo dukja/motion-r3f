@@ -34,7 +34,7 @@ const ScrollTrig = forwardRef((props, ref) => {
             key={index}
             className={`scrollTrigger-0${index + 1} section`}
           >
-            {props.children[index]}
+            {index + 1}
           </SectionDiv>
         ))}
     </ContentDiv>

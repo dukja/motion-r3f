@@ -60,7 +60,13 @@ function MainApp() {
             </ScrollControls>
           </Canvas>
         </div>
-        <ScrollTrig ref={scrollTriggerRef} />
+        <ScrollTrig ref={scrollTriggerRef}>
+          <div>1</div>
+          <div>2</div>
+          <div>3</div>
+          <div>4</div>
+          <div>5</div>
+        </ScrollTrig>
       </Suspense>
     </>
   );
