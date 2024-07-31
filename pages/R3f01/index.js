@@ -34,11 +34,6 @@ const AnimationElement = styled.div`
   transform: rotate(-90deg);
   transform-origin: left top;
 `;
-const ScrollStyled = styled(Scroll)`
-  width: 100%;
-  height: 100%;
-  overflow: scroll;
-`;
 
 function MainApp() {
   const scrollTriggerRef = useRef();
@@ -51,23 +46,21 @@ function MainApp() {
             <ScrollTextWrap />
           </AnimationElement>
         </UIContainer>
-
         <div className="canvas3D">
           <Canvas
             shadows
             camera={{ position: [0, 0, 10] }}
             gl={{ antialias: false }}
           >
-            <ScrollControls pages={0}>
-              <MainCanvas scrollTriggerRef={scrollTriggerRef} />
-              <gridHelper args={[40, 40]} rotation-x={[Math.PI / 2]} />
-              <ScrollStyled html>
-                <TimelineBoxWrap scrollTriggerRef={scrollTriggerRef} />
-              </ScrollStyled>
+            <ScrollControls pages={0} damping={2}>
+              <Scroll>
+                <MainCanvas scrollTriggerRef={scrollTriggerRef} />
+                <gridHelper args={[40, 40]} rotation-x={[Math.PI / 2]} />
+              </Scroll>
             </ScrollControls>
           </Canvas>
-          <ScrollTrig ref={scrollTriggerRef} />
         </div>
+        <ScrollTrig ref={scrollTriggerRef} />
       </Suspense>
     </>
   );

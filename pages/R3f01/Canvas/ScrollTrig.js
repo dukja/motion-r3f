@@ -9,7 +9,11 @@ const ContentDiv = styled.div`
 const SectionDiv = styled.div`
   height: 100vh;
   width: 100vw;
-  border: 1px solid yellow;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 10px solid red;
+  font-size: 24px;
 `;
 
 const ScrollTrig = forwardRef((props, ref) => {

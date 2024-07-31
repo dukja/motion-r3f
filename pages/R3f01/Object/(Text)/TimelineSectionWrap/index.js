@@ -32,6 +32,9 @@ export default function TimelineBoxWrap() {
       <Box ref={(el) => (boxRef.current[2] = el)}>
         <div>4</div>
       </Box>
+      <Box ref={(el) => (boxRef.current[2] = el)}>
+        <div>5</div>
+      </Box>
     </Container>
   );
 }
