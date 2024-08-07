@@ -1,7 +1,6 @@
 import { Box, Container, Button, Link } from "@mui/material";
 
 import BaseLayout from "../src/layout/BaseLayout";
-
 export default function Home() {
   return (
     <Container maxWidth="lg">

@@ -1,13 +1,11 @@
 "use client";
 import React, { Suspense, lazy, useRef } from "react";
-
-import ScrollTrig from "./Canvas/ScrollTrig";
 import { Canvas } from "@react-three/fiber";
-import { Html, Scroll, ScrollControls } from "@react-three/drei";
-
+import { Scroll, ScrollControls } from "@react-three/drei";
 import styled from "styled-components";
 import ScrollTextWrap from "./Animation/(ObjText)/ScrollTextWrap";
-import TimelineBoxWrap from "./Object/(Text)/TimelineSectionWrap";
+import TimelineSection from "./Object/(Text)/TimelineSectionWrap/TimelineSection";
+import ScrollTrig from "./Canvas/ScrollTrig";
 
 const MainCanvas = lazy(() => import("./Canvas/index"));
 
@@ -52,20 +50,18 @@ function MainApp() {
             camera={{ position: [0, 0, 10] }}
             gl={{ antialias: false }}
           >
-            <ScrollControls pages={0} damping={2}>
+            <ScrollControls pages={3} damping={2}>
               <Scroll>
                 <MainCanvas scrollTriggerRef={scrollTriggerRef} />
-                <gridHelper args={[40, 40]} rotation-x={[Math.PI / 2]} />
               </Scroll>
             </ScrollControls>
           </Canvas>
         </div>
         <ScrollTrig ref={scrollTriggerRef}>
           <div>1</div>
-          <div>2</div>
+          <TimelineSection />
           <div>3</div>
           <div>4</div>
-          <div>5</div>
         </ScrollTrig>
       </Suspense>
     </>

@@ -1,4 +1,5 @@
-import { useRef } from "react";
+"use client";
+import React, { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 
 function Item({ animFirst, animScondary }) {
