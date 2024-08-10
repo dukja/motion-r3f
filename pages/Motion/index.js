@@ -19,11 +19,30 @@ import "tailwindcss/tailwind.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// 상수 분리
-const SECTION_HEIGHT = 100; // vh
-const ANIMATION_DURATION = 1; // seconds
-const ROTATION_ANGLE = 360; // degrees
-const SCALE_FACTOR = 1.5;
+// 상수 정의
+const ANIMATION_INITIAL = {
+  FIRST: { x: -3, y: -3 },
+  SECONDARY: { y: 0 },
+};
+
+const ANIMATION_CONFIG = {
+  SECTION_HEIGHT: 100, // vh
+  DURATION: 1, // seconds
+  ROTATION_ANGLE: 360, // degrees
+  SCALE_FACTOR: 1.5,
+};
+
+const ANIMATION_STAGES = {
+  STAGE_1: { x: 3, y: 3 },
+  STAGE_2: { y: 3.3 },
+  STAGE_3: { x: -3 },
+};
+
+const DOM_ANIMATION_STAGES = {
+  STAGE_1: { x: 200, y: 200, rotation: 360 },
+  STAGE_2: { y: 100 },
+  STAGE_3: { x: 0, y: 0, rotation: 0 },
+};
 
 // Context 생성
 const TimelineContext = createContext({
@@ -65,7 +84,7 @@ const ContentDiv = styled.div`
 `;
 
 const SectionDiv = styled.div`
-  height: ${SECTION_HEIGHT}vh;
+  height: ${ANIMATION_CONFIG.SECTION_HEIGHT}vh;
   width: 100%;
   display: flex;
   justify-content: center;
@@ -90,7 +109,8 @@ const ScrollTrig = forwardRef(({ children }, ref) => {
       const sectionHeight = window.innerHeight;
       const isAnimated = section.dataset.animated === "true";
       if (isAnimated) {
-        const animatedSectionHeight = sectionHeight * (1 + ANIMATION_DURATION);
+        const animatedSectionHeight =
+          sectionHeight * (1 + ANIMATION_CONFIG.DURATION);
         totalScrollHeight += animatedSectionHeight;
 
         if (mainTimeline) {
@@ -174,9 +194,9 @@ const TimelineSection = () => {
     }
 
     mainTimeline.to(elementRef.current, {
-      rotation: ROTATION_ANGLE,
-      scale: SCALE_FACTOR,
-      duration: ANIMATION_DURATION,
+      rotation: ANIMATION_CONFIG.ROTATION_ANGLE,
+      scale: ANIMATION_CONFIG.SCALE_FACTOR,
+      duration: ANIMATION_CONFIG.DURATION,
     });
   }, [mainTimeline]);
 
@@ -199,8 +219,8 @@ const TimelineSection = () => {
 const Obj = () => {
   const { objectTimeline } = useTimeline();
   const scrollTriggerRef = useScrollTrigger();
-  let animFirst = { x: -3, y: -3 };
-  let animScondary = { y: 0 };
+  const animFirst = useRef(ANIMATION_INITIAL.FIRST);
+  const animSecondary = useRef(ANIMATION_INITIAL.SECONDARY);
 
   useEffect(() => {
     if (!objectTimeline) {
@@ -217,11 +237,10 @@ const Obj = () => {
           start: "top top",
           endTrigger: sectionRefs[1],
           end: "bottom bottom",
-          snap: 1,
           scrub: 1,
         },
       });
-      tl1.to(animFirst, { x: 3, y: 3 });
+      tl1.to(animFirst.current, ANIMATION_STAGES.STAGE_1);
 
       const tl3 = gsap.timeline({
         scrollTrigger: {
@@ -232,7 +251,7 @@ const Obj = () => {
           scrub: 1,
         },
       });
-      tl3.to(animScondary, { y: 3.3 });
+      tl3.to(animSecondary.current, ANIMATION_STAGES.STAGE_2);
 
       const tl2 = gsap.timeline({
         scrollTrigger: {
@@ -243,26 +262,28 @@ const Obj = () => {
           scrub: 1,
         },
       });
-      tl2.to(animFirst, { x: -3 });
+      tl2.to(animFirst.current, ANIMATION_STAGES.STAGE_3);
 
       objectTimeline.add(tl1, 0).add(tl3, 0).add(tl2, 0);
     }
   }, [scrollTriggerRef, objectTimeline]);
 
-  return <Item animFirst={animFirst} animScondary={animScondary} />;
+  return (
+    <Item animFirst={animFirst.current} animSecondary={animSecondary.current} />
+  );
 };
 
 // Item Component
-function Item({ animFirst, animScondary }) {
+function Item({ animFirst, animSecondary }) {
   const animFirstRef = useRef();
-  const animScondaryRef = useRef();
+  const animSecondaryRef = useRef();
 
   useFrame(() => {
-    if (animFirstRef.current && animScondaryRef.current) {
+    if (animFirstRef.current && animSecondaryRef.current) {
       animFirstRef.current.position.x = -2 * animFirst.x;
       animFirstRef.current.rotation.y = -1.5 * animFirst.y;
       animFirstRef.current.position.y = -1.5 * animFirst.y;
-      animScondaryRef.current.position.y = -1.5 * animScondary.y;
+      animSecondaryRef.current.position.y = -1.5 * animSecondary.y;
     }
   });
 
@@ -277,7 +298,7 @@ function Item({ animFirst, animScondary }) {
           metalness={0.2}
         />
       </mesh>
-      <mesh castShadow ref={animScondaryRef} position={[0, 0, 0]}>
+      <mesh castShadow ref={animSecondaryRef} position={[0, 0, 0]}>
         <sphereGeometry attach="geometry" args={[1, 16, 32]} />
         <meshPhysicalMaterial
           specular={["yellow"]}
@@ -290,14 +311,12 @@ function Item({ animFirst, animScondary }) {
     </group>
   );
 }
+
 const DomAnimationSection = () => {
   const { objectTimeline } = useTimeline();
   const scrollTriggerRef = useScrollTrigger();
-  const sectionRef = useRef(null);
   const boxRef = useRef(null);
   const textRef = useRef(null);
-  const animFirst = useRef({ x: 0, y: 0, rotation: 0 });
-  const animSecondary = useRef({ y: 0 });
 
   useEffect(() => {
     if (!objectTimeline || !scrollTriggerRef || !scrollTriggerRef.current) {
@@ -309,7 +328,8 @@ const DomAnimationSection = () => {
 
     const sectionRefs = scrollTriggerRef.current.getSectionRefs();
 
-    const tl1 = gsap.timeline({
+    gsap.to(boxRef.current, {
+      ...DOM_ANIMATION_STAGES.STAGE_1,
       scrollTrigger: {
         trigger: sectionRefs[0],
         start: "top top",
@@ -318,60 +338,36 @@ const DomAnimationSection = () => {
         markers: true,
       },
     });
-    tl1.to(animFirst.current, { x: 200, y: 200, rotation: 360 });
 
-    const tl3 = gsap.timeline({
+    gsap.to(textRef.current, {
+      ...DOM_ANIMATION_STAGES.STAGE_2,
       scrollTrigger: {
         trigger: sectionRefs[1],
         start: "top top",
         end: "bottom top",
-        markers: true,
         scrub: 1,
+        markers: true,
       },
     });
-    tl3.to(animSecondary.current, { y: 100 });
 
-    const tl2 = gsap.timeline({
+    gsap.to(boxRef.current, {
+      ...DOM_ANIMATION_STAGES.STAGE_3,
       scrollTrigger: {
         trigger: sectionRefs[2],
         start: "top top",
         end: "bottom top",
-        markers: true,
         scrub: 1,
+        markers: true,
       },
     });
-    tl2.to(animFirst.current, { x: 0, y: 0, rotation: 0 });
-
-    objectTimeline.add(tl1, 0).add(tl3, 0).add(tl2, 0);
-
-    // GSAP ticker를 사용하여 애니메이션 업데이트
-    const updateAnimation = () => {
-      if (boxRef.current && textRef.current) {
-        gsap.set(boxRef.current, {
-          x: animFirst.current.x,
-          y: animFirst.current.y,
-          rotation: animFirst.current.rotation,
-        });
-        gsap.set(textRef.current, {
-          y: animSecondary.current.y,
-        });
-      }
-    };
-
-    gsap.ticker.add(updateAnimation);
 
     return () => {
-      console.log("Cleaning up DomAnimationSection timeline");
-      tl1.kill();
-      tl2.kill();
-      tl3.kill();
-      gsap.ticker.remove(updateAnimation);
+      ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
     };
   }, [objectTimeline, scrollTriggerRef]);
 
   return (
     <div
-      ref={sectionRef}
       style={{
         position: "fixed",
         top: 0,
@@ -410,27 +406,22 @@ const DomAnimationSection = () => {
     </div>
   );
 };
-// Light Component (가정)
-const Light = () => {
-  return (
-    <>
-      {/* <ambientLight intensity={0.5} /> */}
-      {/* <pointLight position={[10, 10, 10]} color="blue" /> */}
-      <directionalLight
-        castShadow
-        position={[0, 10, 20]}
-        intensity={0.9}
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-        shadow-camera-far={50}
-        shadow-camera-left={-10}
-        shadow-camera-right={10}
-        shadow-camera-top={10}
-        shadow-camera-bottom={-10}
-      />
-    </>
-  );
-};
+
+// Light Component
+const Light = () => (
+  <directionalLight
+    castShadow
+    position={[0, 10, 20]}
+    intensity={0.9}
+    shadow-mapSize-width={1024}
+    shadow-mapSize-height={1024}
+    shadow-camera-far={50}
+    shadow-camera-left={-10}
+    shadow-camera-right={10}
+    shadow-camera-top={10}
+    shadow-camera-bottom={-10}
+  />
+);
 
 // OtherComponent
 const OtherComponent = () => (
@@ -474,37 +465,10 @@ const MainApp = () => {
         <DomAnimationSection />
         <ScrollContent>
           <ScrollTrig ref={scrollTriggerRef}>
-            <div
-              style={{
-                height: "100vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              Section 0
-            </div>
+            <div>Section 0</div>
             <TimelineSection animated />
-            <div
-              style={{
-                height: "100vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              Section 2
-            </div>
-            <div
-              style={{
-                height: "100vh",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              Section 3
-            </div>
+            <div>Section 2</div>
+            <div>Section 3</div>
           </ScrollTrig>
         </ScrollContent>
       </TimelineContext.Provider>
