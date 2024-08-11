@@ -11,7 +11,7 @@ import React, {
   useContext,
 } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Scroll, ScrollControls } from "@react-three/drei";
+import { Scroll, ScrollControls, useGLTF } from "@react-three/drei";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import styled from "styled-components";
@@ -44,6 +44,42 @@ const DOM_ANIMATION_STAGES = {
   STAGE_2: { y: 100 },
   STAGE_3: { x: 0, y: 0, rotation: 0 },
 };
+const PHOTO_ANIMATION = {
+  FLOAT_DISTANCE: 10,
+  FLOAT_DURATION_MIN: 2,
+  FLOAT_DURATION_MAX: 3,
+  SCROLL_SPEED_MULTIPLIER: 0.3,
+  SCROLL_SCRUB: 1,
+  POSITION_VARIATION: 10, // 위치 변화 폭
+  SIZE_VARIATION: 50, // 크기 변화 폭
+  BASE_SIZE: 200, // 기본 크기
+  POSITION_BASE: 20, // 기본 위치
+};
+
+const SectionContainer = styled.div`
+  height: 100vh;
+  width: 100vw;
+  background-color: black;
+  position: relative;
+  overflow: hidden;
+`;
+
+const PhotoBox = styled.div`
+  height: 150px;
+  width: 150px;
+  position: absolute;
+  background-size: cover;
+  background-position: center;
+  border-radius: 10px;
+`;
+
+const Title = styled.h2`
+  color: white;
+  text-align: center;
+  padding-top: 20px;
+  position: sticky;
+  top: 20px;
+`;
 
 // Context 생성
 const TimelineContext = createContext({
@@ -92,35 +128,78 @@ const SectionDiv = styled.div`
   align-items: center;
   font-size: 24px;
 `;
-export const useFloatingAnimation = (ref, options = {}) => {
-  const { yOffset = 10, duration = 1, ease = "power1.inOut" } = options;
 
-  const startFloating = useCallback(() => {
-    if (!ref.current) return;
-    gsap.to(ref.current, {
-      y: `-=${yOffset}`,
+export const useFloatingAnimation = () => {
+  const startFloating = useCallback((element, options = {}) => {
+    const { yOffset = 10, duration = 2, ease = "sine.inOut" } = options;
+
+    if (!element) return;
+
+    const floatingTween = gsap.to(element, {
+      y: `+=${yOffset}`,
       duration,
       repeat: -1,
       yoyo: true,
       ease,
     });
-  }, [ref, yOffset, duration, ease]);
 
-  const stopFloating = useCallback(() => {
-    if (!ref.current) return;
-    gsap.killTweensOf(ref.current);
-    gsap.to(ref.current, { y: 0, duration: 0.3 });
-  }, [ref]);
-
-  useEffect(() => {
-    startFloating();
     return () => {
-      stopFloating();
+      floatingTween.kill();
     };
-  }, [startFloating, stopFloating]);
+  }, []);
+
+  const stopFloating = useCallback((element) => {
+    if (!element) return;
+    gsap.killTweensOf(element);
+    gsap.to(element, { y: 0, duration: 0.3 });
+  }, []);
 
   return { startFloating, stopFloating };
 };
+
+const generatePositions = (numPhotos) => {
+  const positions = [];
+  const numRows = Math.ceil(Math.sqrt(numPhotos));
+  const numCols = Math.ceil(numPhotos / numRows);
+
+  const sizeRatios = [
+    { width: 1, height: 1 },
+    { width: 1, height: 1.5 },
+    { width: 1.5, height: 1 },
+  ];
+
+  for (let row = 0; row < numRows; row++) {
+    for (let col = 0; col < numCols; col++) {
+      if (positions.length < numPhotos) {
+        const ratio = sizeRatios[Math.floor(Math.random() * sizeRatios.length)];
+        const baseSize = PHOTO_ANIMATION.BASE_SIZE;
+        positions.push({
+          x: `${
+            (col + 1) * (100 / (numCols + 1)) +
+            (Math.random() * PHOTO_ANIMATION.POSITION_VARIATION -
+              PHOTO_ANIMATION.POSITION_VARIATION / 2)
+          }%`,
+          y: `${
+            (row + 1) * (100 / (numRows + 1)) +
+            (Math.random() * PHOTO_ANIMATION.POSITION_VARIATION -
+              PHOTO_ANIMATION.POSITION_VARIATION / 2)
+          }%`,
+          width: `${
+            Math.random() * PHOTO_ANIMATION.SIZE_VARIATION +
+            baseSize * ratio.width
+          }px`,
+          height: `${
+            Math.random() * PHOTO_ANIMATION.SIZE_VARIATION +
+            baseSize * ratio.height
+          }px`,
+        });
+      }
+    }
+  }
+
+  return positions;
+};
+
 export const FloatingElement = ({
   children,
   scrollTrigger,
@@ -129,24 +208,20 @@ export const FloatingElement = ({
   ...props
 }) => {
   const elementRef = useRef(null);
-  const { startFloating, stopFloating } = useFloatingAnimation(elementRef);
-  const [isScrolling, setIsScrolling] = useState(false);
+  const { startFloating, stopFloating } = useFloatingAnimation();
 
   useEffect(() => {
+    if (!elementRef.current) return;
+
+    startFloating(elementRef.current, {
+      yOffset: 20,
+      duration: 2,
+      ease: "sine.inOut",
+    });
+
     if (!scrollTrigger || !animationStages) return;
 
     const { trigger, start, end } = scrollTrigger;
-
-    const scrollHandler = debounce(() => {
-      setIsScrolling(false);
-      startFloating();
-    }, 150); // 스크롤이 150ms 동안 멈추면 둥둥 효과 시작
-
-    window.addEventListener("scroll", () => {
-      setIsScrolling(true);
-      stopFloating();
-      scrollHandler();
-    });
 
     Object.entries(animationStages).forEach(([stage, animation], index) => {
       gsap.to(elementRef.current, {
@@ -159,18 +234,19 @@ export const FloatingElement = ({
               ? end
               : `${start} +=${(index + 1) * 100}%`,
           scrub: 1,
-          markers: true,
-          onEnter: stopFloating,
-          onLeaveBack: startFloating,
+          onEnter: () => stopFloating(elementRef.current),
+          onLeaveBack: () => startFloating(elementRef.current),
           onLeave:
-            index === animationStages.length - 1 ? startFloating : undefined,
+            index === animationStages.length - 1
+              ? () => startFloating(elementRef.current)
+              : undefined,
         },
       });
     });
 
     return () => {
+      stopFloating(elementRef.current);
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
-      window.removeEventListener("scroll", scrollHandler);
     };
   }, [scrollTrigger, animationStages, startFloating, stopFloating]);
 
@@ -181,35 +257,12 @@ export const FloatingElement = ({
   );
 };
 
-const SectionContainer = styled.div`
-  height: 100vh;
-  width: 100vw;
-  background-color: black;
-  position: relative;
-  overflow: hidden;
-  z-index: -1;
-`;
-
-const PhotoBox = styled.div`
-  height: 150px;
-  width: 150px;
-  position: absolute;
-  background-size: cover;
-  background-position: center;
-  border-radius: 10px;
-`;
-const PHOTO_ANIMATION = {
-  FLOAT_DISTANCE: 30,
-  FLOAT_DURATION_MIN: 2,
-  FLOAT_DURATION_MAX: 3,
-  SCROLL_SPEED_MULTIPLIER: 1.5, // 기본 스크롤 속도보다 1.5배 빠름
-  SCROLL_SCRUB: 0.5,
-};
-
 export const PhotoSection = () => {
   const sectionRef = useRef(null);
   const photoRefs = useRef([]);
   const [photos, setPhotos] = useState([]);
+  const [positions, setPositions] = useState([]);
+  const scrollTriggerRef = useScrollTrigger();
 
   useEffect(() => {
     const photoUrls = [
@@ -221,71 +274,64 @@ export const PhotoSection = () => {
       "https://picsum.photos/150/150?random=6",
     ];
     setPhotos(photoUrls);
+    const numPhotos = photoUrls.length;
+    setPositions(generatePositions(numPhotos));
   }, []);
 
   useEffect(() => {
-    if (!sectionRef.current || photoRefs.current.length === 0) return;
+    if (!scrollTriggerRef || photoRefs.current.length === 0) return;
 
-    const randomPosition = () => ({
-      x: Math.random() * (window.innerWidth - 150),
-      y: Math.random() * window.innerHeight + window.innerHeight, // 시작 위치를 화면 아래로 설정
-    });
+    const sectionRefs = scrollTriggerRef.current.getSectionRefs();
 
     photoRefs.current.forEach((photo, index) => {
       if (!photo) return;
 
-      const pos = randomPosition();
+      const pos = positions[index];
       gsap.set(photo, {
-        x: pos.x,
-        y: pos.y,
-        opacity: 0, // 초기에 투명하게 설정
+        top: pos.x,
+        left: pos.y,
+        width: pos.size,
+        height: pos.size,
+        opacity: 0.1,
       });
 
-      // 스크롤에 따른 이동 및 나타나는 애니메이션
       gsap.to(photo, {
         y: `-=${window.innerHeight * PHOTO_ANIMATION.SCROLL_SPEED_MULTIPLIER}`,
-        opacity: 1,
         ease: "none",
         scrollTrigger: {
-          trigger: sectionRef.current,
+          trigger: sectionRefs[3],
           start: "top bottom",
           end: "bottom top",
           scrub: PHOTO_ANIMATION.SCROLL_SCRUB,
+          onUpdate: (self) => {
+            // 현재 스크롤 진행도를 기반으로 예상 위치 설정
+            const progress = self.progress;
+            const yMove =
+              -window.innerHeight *
+              PHOTO_ANIMATION.SCROLL_SPEED_MULTIPLIER *
+              progress;
+            gsap.to(photo, { y: yMove, overwrite: "auto" });
+          },
+          // onEnter: () => gsap.to(photo, { opacity: 1, duration: 0.7 }),
+          onToggle: (self) => {
+            if (self.isActive) {
+              gsap.to(photo, { opacity: 1, duration: 1 });
+            } else {
+              gsap.to(photo, { opacity: 0.3, duration: 1 });
+            }
+          },
         },
-      });
-
-      // 둥둥 효과
-      gsap.to(photo, {
-        y: `+=${PHOTO_ANIMATION.FLOAT_DISTANCE}`,
-        duration:
-          PHOTO_ANIMATION.FLOAT_DURATION_MIN +
-          Math.random() *
-            (PHOTO_ANIMATION.FLOAT_DURATION_MAX -
-              PHOTO_ANIMATION.FLOAT_DURATION_MIN),
-        repeat: -1,
-        yoyo: true,
-        ease: "sine.inOut",
       });
     });
 
     return () => {
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
     };
-  }, [photos]);
+  }, [photos, scrollTriggerRef]);
 
   return (
-    <SectionContainer ref={sectionRef} className="photo-section">
-      <h2
-        style={{
-          color: "white",
-          textAlign: "center",
-          paddingTop: "20px",
-          position: "sticky",
-          top: "20px",
-        }}
-      >
-        Photo Section
-      </h2>
+    <SectionContainer ref={sectionRef}>
+      <Title>Photo Section</Title>
       {photos.map((url, index) => (
         <PhotoBox
           key={index}
@@ -298,7 +344,6 @@ export const PhotoSection = () => {
     </SectionContainer>
   );
 };
-
 export const ScrollTrig = forwardRef(({ children }, ref) => {
   const { mainTimeline, objectTimeline } = useTimeline();
   const contentRef = useRef(null);
@@ -461,22 +506,40 @@ export const Obj = () => {
 
 export const Item = ({ animFirst, animSecondary }) => {
   const animFirstRef = useRef();
-  const animSecondaryRef = useRef();
+  const ribbonRef = useRef();
   const time = useRef(0);
+  const { startFloating, stopFloating } = useFloatingAnimation();
+  const { scene } = useGLTF("/3D/ribbon.glb");
+  useEffect(() => {
+    if (!animFirstRef.current) return;
+
+    const cleanup = startFloating(animFirstRef.current, {
+      yOffset: 20,
+      duration: 2,
+      ease: "sine.inOut",
+      scrollSpeed: 1.2,
+    });
+
+    return () => {
+      cleanup();
+      stopFloating(animFirstRef.current);
+    };
+  }, [startFloating, stopFloating]);
 
   useFrame((state, delta) => {
-    if (animFirstRef.current && animSecondaryRef.current) {
+    if (animFirstRef.current && ribbonRef.current) {
       // 기존 애니메이션 로직
       animFirstRef.current.position.x = -2 * animFirst.x;
       animFirstRef.current.rotation.y = -1.5 * animFirst.y;
       animFirstRef.current.position.y = -1.5 * animFirst.y;
-      animSecondaryRef.current.position.y = -1.5 * animSecondary.y;
+      ribbonRef.current.position.y = -1.5 * animSecondary.y;
 
       // 둥둥 효과 추가
       time.current += delta;
-      const floatY = Math.sin(time.current) * 0.2; // 0.1은 움직임의 크기를 조절합니다
+      const floatY = Math.sin(time.current) * 0.1;
 
       animFirstRef.current.position.y += floatY;
+      ribbonRef.current.position.y += floatY;
     }
   });
 
@@ -491,27 +554,83 @@ export const Item = ({ animFirst, animSecondary }) => {
           metalness={0.2}
         />
       </mesh>
-      <mesh castShadow ref={animSecondaryRef} position={[0, 0, 0]}>
-        <sphereGeometry attach="geometry" args={[1, 16, 32]} />
-        <meshPhysicalMaterial
-          specular={["yellow"]}
-          shininess={1000}
-          metalness={0.2}
-          roughness={0}
-          clearcoat={0.8}
-        />
-      </mesh>
+      <primitive
+        ref={ribbonRef}
+        object={scene}
+        scale={1}
+        position={[0, 0, 0]}
+      />
     </group>
   );
 };
-export const DomAnimationSection = () => {
-  const scrollTriggerRef = useScrollTrigger();
 
-  const animationStages = [
-    DOM_ANIMATION_STAGES.STAGE_1,
-    DOM_ANIMATION_STAGES.STAGE_2,
-    DOM_ANIMATION_STAGES.STAGE_3,
-  ];
+export const DomAnimationSection = () => {
+  const { startFloating, stopFloating } = useFloatingAnimation();
+  const elementRef = useRef(null);
+  const textRef = useRef(null);
+  const scrollTriggerRef = useContext(ScrollTriggerContext);
+  const { objectTimeline } = useContext(TimelineContext);
+
+  useEffect(() => {
+    if (!scrollTriggerRef || !objectTimeline) return;
+
+    const sectionRefs = scrollTriggerRef.current.getSectionRefs();
+
+    objectTimeline.clear();
+
+    const tl1 = gsap.timeline({
+      scrollTrigger: {
+        trigger: sectionRefs[0],
+        start: "top top",
+        endTrigger: sectionRefs[1],
+        end: "bottom bottom",
+        snap: 1,
+        scrub: 1,
+        markers: true,
+      },
+    });
+    tl1
+      .to(textRef.current, {
+        xPercent: 0,
+      })
+      .to(textRef.current, {
+        xPercent: 100,
+      });
+
+    const tl2 = gsap.timeline({
+      scrollTrigger: {
+        trigger: sectionRefs[1],
+        start: "top top",
+        endTrigger: sectionRefs[2],
+        end: "bottom bottom",
+        markers: true,
+        scrub: 1,
+      },
+    });
+    tl2.to(elementRef.current, {
+      width: 100,
+      height: 100,
+      x: "+=300",
+    });
+
+    objectTimeline.add(tl1).add(tl2);
+  }, [scrollTriggerRef, objectTimeline]);
+
+  useEffect(() => {
+    if (!elementRef.current) return;
+
+    const cleanup = startFloating(elementRef.current, {
+      yOffset: 20,
+      duration: 2,
+      ease: "sine.inOut",
+      scrollSpeed: 1.2,
+    });
+
+    return () => {
+      cleanup();
+      stopFloating(elementRef.current);
+    };
+  }, [startFloating, stopFloating]);
 
   return (
     <div
@@ -525,13 +644,8 @@ export const DomAnimationSection = () => {
         zIndex: 10,
       }}
     >
-      <FloatingElement
-        scrollTrigger={{
-          trigger: scrollTriggerRef?.current?.getSectionRefs()[0],
-          start: "top top",
-          end: "bottom top",
-        }}
-        animationStages={animationStages}
+      <div
+        ref={elementRef}
         style={{
           width: 100,
           height: 100,
@@ -543,6 +657,7 @@ export const DomAnimationSection = () => {
         }}
       />
       <h2
+        ref={textRef}
         style={{
           position: "absolute",
           top: "70%",
@@ -557,7 +672,6 @@ export const DomAnimationSection = () => {
     </div>
   );
 };
-
 export const Light = () => (
   <directionalLight
     castShadow
