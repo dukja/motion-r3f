@@ -16,7 +16,6 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
 import styled from "styled-components";
 import "tailwindcss/tailwind.css";
-import { debounce } from "lodash";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -40,20 +39,24 @@ const ANIMATION_STAGES = {
 };
 
 const DOM_ANIMATION_STAGES = {
-  STAGE_1: { x: 200, y: 200, rotation: 360 },
-  STAGE_2: { y: 100 },
-  STAGE_3: { x: 0, y: 0, rotation: 0 },
+  STAGE_1: { xPercent: 0, duration: 1 },
+  STAGE_2: { xPercent: 100, duration: 1 },
+  STAGE_3: { width: 100, height: 100, x: "+=300", duration: 1 },
 };
 const PHOTO_ANIMATION = {
-  FLOAT_DISTANCE: 10,
-  FLOAT_DURATION_MIN: 2,
-  FLOAT_DURATION_MAX: 3,
-  SCROLL_SPEED_MULTIPLIER: 0.3,
-  SCROLL_SCRUB: 1,
-  POSITION_VARIATION: 10, // 위치 변화 폭
-  SIZE_VARIATION: 50, // 크기 변화 폭
-  BASE_SIZE: 200, // 기본 크기
-  POSITION_BASE: 20, // 기본 위치
+  FLOAT_DISTANCE: 10, // 사진이 위아래로 움직이는 최대 거리 (픽셀)
+  FLOAT_DURATION_MIN: 2, // 사진이 위아래로 움직이는 최소 시간 (초)
+  FLOAT_DURATION_MAX: 3, // 사진이 위아래로 움직이는 최대 시간 (초)
+  SCROLL_SPEED_MULTIPLIER: 0.3, // 스크롤 속도에 대한 사진 이동 속도의 배수
+  SCROLL_SCRUB: 1, // 스크롤 애니메이션의 부드러움 정도 (1은 즉시 반응)
+  ASPECT_RATIO: 1.3, // 사진의 높이/너비 비율
+  OPACITY_DURATION: 0.2, // 투명도 변화 지속 시간 (초)
+  OVERLAP_THRESHOLD: 20, // 사진이 겹칠 수 있는 최대 픽셀
+  OPACITY_LOW: 0.3, // 사진의 최소 투명도
+  OPACITY_HIGH: 1, // 사진의 최대 투명도
+  POSITION_VARIATION: 10, // 사진 위치의 무작위성 정도 (퍼센트)
+  MIN_WIDTH: 150, // 사진의 최소 너비 (픽셀)
+  MAX_WIDTH: 300, // 사진의 최대 너비 (픽셀)
 };
 
 const SectionContainer = styled.div`
@@ -65,12 +68,11 @@ const SectionContainer = styled.div`
 `;
 
 const PhotoBox = styled.div`
-  height: 150px;
-  width: 150px;
   position: absolute;
   background-size: cover;
   background-position: center;
   border-radius: 10px;
+  transition: opacity 0.3s ease, box-shadow 0.3s ease;
 `;
 
 const Title = styled.h2`
@@ -130,76 +132,146 @@ const SectionDiv = styled.div`
 `;
 
 export const useFloatingAnimation = () => {
+  const time = useRef(0);
+
   const startFloating = useCallback((element, options = {}) => {
-    const { yOffset = 10, duration = 2, ease = "sine.inOut" } = options;
+    const {
+      yOffset = 10,
+      duration = 2,
+      ease = "sine.inOut",
+      amplitude = 0.1,
+      frequency = 1,
+      is3D = false,
+    } = options;
 
     if (!element) return;
 
-    const floatingTween = gsap.to(element, {
-      y: `+=${yOffset}`,
-      duration,
-      repeat: -1,
-      yoyo: true,
-      ease,
-    });
+    if (is3D) {
+      // 3D 객체에 대한 애니메이션 함수 반환
+      return (delta) => {
+        time.current += delta;
+        const floatY = Math.sin(time.current * frequency) * amplitude;
+        element.position.y += floatY;
+      };
+    } else {
+      // DOM 요소에 대한 애니메이션
+      const floatingTween = gsap.to(element, {
+        y: `+=${yOffset}`,
+        duration,
+        repeat: -1,
+        yoyo: true,
+        ease,
+      });
 
-    return () => {
-      floatingTween.kill();
-    };
+      return () => floatingTween.kill();
+    }
   }, []);
 
-  const stopFloating = useCallback((element) => {
+  const stopFloating = useCallback((element, is3D = false) => {
     if (!element) return;
-    gsap.killTweensOf(element);
-    gsap.to(element, { y: 0, duration: 0.3 });
+
+    if (is3D) {
+      // 3D 객체의 애니메이션 중지
+      element.position.y = 0;
+    } else {
+      // DOM 요소의 애니메이션 중지
+      gsap.killTweensOf(element);
+      gsap.to(element, { y: 0, duration: 0.3 });
+    }
   }, []);
 
   return { startFloating, stopFloating };
 };
+export const generatePositions = (photos, numPhotos) => {
+  let photoArray = Array.isArray(photos)
+    ? photos
+    : typeof photos === "object" && photos !== null
+    ? Object.values(photos)
+    : [];
 
-const generatePositions = (numPhotos) => {
+  while (photoArray.length < numPhotos) {
+    photoArray.push({});
+  }
+
   const positions = [];
   const numRows = Math.ceil(Math.sqrt(numPhotos));
   const numCols = Math.ceil(numPhotos / numRows);
 
-  const sizeRatios = [
-    { width: 1, height: 1 },
-    { width: 1, height: 1.5 },
-    { width: 1.5, height: 1 },
-  ];
-
-  for (let row = 0; row < numRows; row++) {
-    for (let col = 0; col < numCols; col++) {
-      if (positions.length < numPhotos) {
-        const ratio = sizeRatios[Math.floor(Math.random() * sizeRatios.length)];
-        const baseSize = PHOTO_ANIMATION.BASE_SIZE;
-        positions.push({
-          x: `${
-            (col + 1) * (100 / (numCols + 1)) +
-            (Math.random() * PHOTO_ANIMATION.POSITION_VARIATION -
-              PHOTO_ANIMATION.POSITION_VARIATION / 2)
-          }%`,
-          y: `${
-            (row + 1) * (100 / (numRows + 1)) +
-            (Math.random() * PHOTO_ANIMATION.POSITION_VARIATION -
-              PHOTO_ANIMATION.POSITION_VARIATION / 2)
-          }%`,
-          width: `${
-            Math.random() * PHOTO_ANIMATION.SIZE_VARIATION +
-            baseSize * ratio.width
-          }px`,
-          height: `${
-            Math.random() * PHOTO_ANIMATION.SIZE_VARIATION +
-            baseSize * ratio.height
-          }px`,
-        });
-      }
+  const checkOverlap = (newPos, existingPositions) => {
+    for (let pos of existingPositions) {
+      const xOverlap =
+        Math.abs(parseFloat(newPos.left) - parseFloat(pos.left)) <
+        PHOTO_ANIMATION.OVERLAP_THRESHOLD_HORIZONTAL;
+      const yOverlap =
+        Math.abs(parseFloat(newPos.top) - parseFloat(pos.top)) <
+        PHOTO_ANIMATION.OVERLAP_THRESHOLD_VERTICAL;
+      if (xOverlap && yOverlap) return true;
     }
-  }
+    return false;
+  };
+
+  photoArray.forEach((photo, index) => {
+    if (index >= numPhotos) return;
+
+    const row = Math.floor(index / numCols);
+    const col = index % numCols;
+
+    let newPosition;
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    do {
+      attempts++;
+      newPosition = { ...photo };
+
+      if (!newPosition.width) {
+        const width =
+          Math.random() *
+            (PHOTO_ANIMATION.MAX_WIDTH - PHOTO_ANIMATION.MIN_WIDTH) +
+          PHOTO_ANIMATION.MIN_WIDTH;
+        newPosition.width = `${width}px`;
+
+        if (!newPosition.height) {
+          const height = width * PHOTO_ANIMATION.ASPECT_RATIO;
+          newPosition.height = `${height}px`;
+        }
+      } else if (!newPosition.height) {
+        const width = parseInt(newPosition.width);
+        const height = width * PHOTO_ANIMATION.ASPECT_RATIO;
+        newPosition.height = `${height}px`;
+      }
+
+      if (!newPosition.top) {
+        const centerY = (row + 0.5) * (100 / numRows);
+        const variation =
+          (Math.random() - 0.5) * PHOTO_ANIMATION.POSITION_VARIATION;
+        newPosition.top = `${centerY + variation}%`;
+      }
+
+      if (!newPosition.left) {
+        const centerX = (col + 0.5) * (100 / numCols);
+        const variation =
+          (Math.random() - 0.5) * PHOTO_ANIMATION.POSITION_VARIATION;
+        newPosition.left = `${centerX + variation}%`;
+      }
+
+      if (!newPosition.url) {
+        newPosition.url = `https://picsum.photos/300/390?random=${index + 1}`;
+      }
+
+      if (attempts >= maxAttempts) {
+        console.warn(
+          `Failed to find non-overlapping position for photo ${index} after ${maxAttempts} attempts`
+        );
+        break;
+      }
+    } while (checkOverlap(newPosition, positions));
+
+    positions.push(newPosition);
+  });
 
   return positions;
 };
-
 export const FloatingElement = ({
   children,
   scrollTrigger,
@@ -261,38 +333,83 @@ export const PhotoSection = () => {
   const sectionRef = useRef(null);
   const photoRefs = useRef([]);
   const [photos, setPhotos] = useState([]);
-  const [positions, setPositions] = useState([]);
   const scrollTriggerRef = useScrollTrigger();
 
   useEffect(() => {
-    const photoUrls = [
-      "https://picsum.photos/150/150?random=1",
-      "https://picsum.photos/150/150?random=2",
-      "https://picsum.photos/150/150?random=3",
-      "https://picsum.photos/150/150?random=4",
-      "https://picsum.photos/150/150?random=5",
-      "https://picsum.photos/150/150?random=6",
+    const initialPhotos = [
+      { url: "https://picsum.photos/300/390?random=1" },
+      {
+        url: "https://picsum.photos/300/390?random=2",
+        top: "30%",
+        left: "40%",
+      },
+      { url: "https://picsum.photos/300/390?random=3", width: "200px" },
+      { url: "https://picsum.photos/300/390?random=4", height: "250px" },
+      { url: "https://picsum.photos/300/390?random=5" },
+      {
+        url: "https://picsum.photos/300/390?random=6",
+        top: "70%",
+        left: "60%",
+      },
     ];
-    setPhotos(photoUrls);
-    const numPhotos = photoUrls.length;
-    setPositions(generatePositions(numPhotos));
+    const totalPhotos = 10;
+
+    const positionedPhotos = generatePositions(initialPhotos, totalPhotos);
+    setPhotos(positionedPhotos);
   }, []);
 
   useEffect(() => {
-    if (!scrollTriggerRef || photoRefs.current.length === 0) return;
+    if (
+      !scrollTriggerRef ||
+      photoRefs.current.length === 0 ||
+      photos.length === 0
+    )
+      return;
 
     const sectionRefs = scrollTriggerRef.current.getSectionRefs();
 
     photoRefs.current.forEach((photo, index) => {
       if (!photo) return;
 
-      const pos = positions[index];
+      const pos = photos[index];
       gsap.set(photo, {
-        top: pos.x,
-        left: pos.y,
-        width: pos.size,
-        height: pos.size,
-        opacity: 0.1,
+        top: pos.top,
+        left: pos.left,
+        width: pos.width,
+        height: pos.height,
+        opacity: PHOTO_ANIMATION.OPACITY_LOW,
+        boxShadow: "none",
+      });
+
+      let direction = 1; // 1 for downward, -1 for upward
+
+      ScrollTrigger.create({
+        trigger: sectionRefs[3],
+        start: "top center",
+        end: "bottom center",
+        onEnter: () => {
+          if (direction === 1) {
+            gsap.to(photo, {
+              opacity: PHOTO_ANIMATION.OPACITY_HIGH,
+              duration: 0.3,
+              overwrite: "auto",
+            });
+          }
+        },
+        onEnterBack: () => {
+          // Do nothing when scrolling back up into the section
+        },
+        onLeave: () => {
+          direction = -1;
+        },
+        onLeaveBack: () => {
+          direction = 1;
+          gsap.to(photo, {
+            opacity: PHOTO_ANIMATION.OPACITY_LOW,
+            duration: 0.3,
+            overwrite: "auto",
+          });
+        },
       });
 
       gsap.to(photo, {
@@ -303,23 +420,6 @@ export const PhotoSection = () => {
           start: "top bottom",
           end: "bottom top",
           scrub: PHOTO_ANIMATION.SCROLL_SCRUB,
-          onUpdate: (self) => {
-            // 현재 스크롤 진행도를 기반으로 예상 위치 설정
-            const progress = self.progress;
-            const yMove =
-              -window.innerHeight *
-              PHOTO_ANIMATION.SCROLL_SPEED_MULTIPLIER *
-              progress;
-            gsap.to(photo, { y: yMove, overwrite: "auto" });
-          },
-          // onEnter: () => gsap.to(photo, { opacity: 1, duration: 0.7 }),
-          onToggle: (self) => {
-            if (self.isActive) {
-              gsap.to(photo, { opacity: 1, duration: 1 });
-            } else {
-              gsap.to(photo, { opacity: 0.3, duration: 1 });
-            }
-          },
         },
       });
     });
@@ -327,17 +427,22 @@ export const PhotoSection = () => {
     return () => {
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
     };
-  }, [photos, scrollTriggerRef]);
+  }, [scrollTriggerRef, photos]);
 
   return (
     <SectionContainer ref={sectionRef}>
       <Title>Photo Section</Title>
-      {photos.map((url, index) => (
+      {photos.map((photo, index) => (
         <PhotoBox
           key={index}
           ref={(el) => (photoRefs.current[index] = el)}
           style={{
-            backgroundImage: `url(${url})`,
+            backgroundImage: `url(${photo.url})`,
+            width: photo.width,
+            height: photo.height,
+            top: photo.top,
+            left: photo.left,
+            zIndex: index,
           }}
         />
       ))}
@@ -507,39 +612,41 @@ export const Obj = () => {
 export const Item = ({ animFirst, animSecondary }) => {
   const animFirstRef = useRef();
   const ribbonRef = useRef();
-  const time = useRef(0);
-  const { startFloating, stopFloating } = useFloatingAnimation();
+  const animateFirstRef = useRef();
+  const animateRibbonRef = useRef();
   const { scene } = useGLTF("/3D/ribbon.glb");
-  useEffect(() => {
-    if (!animFirstRef.current) return;
+  const { startFloating, stopFloating } = useFloatingAnimation();
 
-    const cleanup = startFloating(animFirstRef.current, {
-      yOffset: 20,
-      duration: 2,
-      ease: "sine.inOut",
-      scrollSpeed: 1.2,
+  useEffect(() => {
+    if (!animFirstRef.current || !ribbonRef.current) return;
+
+    animateFirstRef.current = startFloating(animFirstRef.current, {
+      amplitude: 0.1,
+      frequency: 1,
+      is3D: true,
+    });
+    animateRibbonRef.current = startFloating(ribbonRef.current, {
+      amplitude: 0.1,
+      frequency: 1,
+      is3D: true,
     });
 
     return () => {
-      cleanup();
-      stopFloating(animFirstRef.current);
+      stopFloating(animFirstRef.current, true);
+      stopFloating(ribbonRef.current, true);
     };
   }, [startFloating, stopFloating]);
 
   useFrame((state, delta) => {
     if (animFirstRef.current && ribbonRef.current) {
-      // 기존 애니메이션 로직
       animFirstRef.current.position.x = -2 * animFirst.x;
       animFirstRef.current.rotation.y = -1.5 * animFirst.y;
       animFirstRef.current.position.y = -1.5 * animFirst.y;
       ribbonRef.current.position.y = -1.5 * animSecondary.y;
 
-      // 둥둥 효과 추가
-      time.current += delta;
-      const floatY = Math.sin(time.current) * 0.1;
-
-      animFirstRef.current.position.y += floatY;
-      ribbonRef.current.position.y += floatY;
+      // 여기서 반환된 애니메이션 함수 실행
+      if (animateFirstRef.current) animateFirstRef.current(delta);
+      if (animateRibbonRef.current) animateRibbonRef.current(delta);
     }
   });
 
@@ -563,7 +670,6 @@ export const Item = ({ animFirst, animSecondary }) => {
     </group>
   );
 };
-
 export const DomAnimationSection = () => {
   const { startFloating, stopFloating } = useFloatingAnimation();
   const elementRef = useRef(null);
@@ -584,18 +690,12 @@ export const DomAnimationSection = () => {
         start: "top top",
         endTrigger: sectionRefs[1],
         end: "bottom bottom",
-        snap: 1,
         scrub: 1,
-        markers: true,
       },
     });
     tl1
-      .to(textRef.current, {
-        xPercent: 0,
-      })
-      .to(textRef.current, {
-        xPercent: 100,
-      });
+      .to(textRef.current, DOM_ANIMATION_STAGES.STAGE_1)
+      .to(textRef.current, DOM_ANIMATION_STAGES.STAGE_2);
 
     const tl2 = gsap.timeline({
       scrollTrigger: {
@@ -603,19 +703,13 @@ export const DomAnimationSection = () => {
         start: "top top",
         endTrigger: sectionRefs[2],
         end: "bottom bottom",
-        markers: true,
         scrub: 1,
       },
     });
-    tl2.to(elementRef.current, {
-      width: 100,
-      height: 100,
-      x: "+=300",
-    });
+    tl2.to(elementRef.current, DOM_ANIMATION_STAGES.STAGE_3);
 
     objectTimeline.add(tl1).add(tl2);
   }, [scrollTriggerRef, objectTimeline]);
-
   useEffect(() => {
     if (!elementRef.current) return;
 
