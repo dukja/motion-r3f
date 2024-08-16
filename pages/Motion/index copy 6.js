@@ -11,8 +11,7 @@ import React, {
   useContext,
   memo,
 } from "react";
-import * as THREE from "three";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { Scroll, ScrollControls, useGLTF } from "@react-three/drei";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/dist/ScrollTrigger";
@@ -587,77 +586,35 @@ export const ScrollTrig = forwardRef(({ children }, ref) => {
       const sectionHeight = section.offsetHeight;
       totalScrollHeight += sectionHeight;
 
-      if (index === 4) {
-        // section5에 대한 특별한 처리
-        const trigger = ScrollTrigger.create({
-          trigger: section,
-          start: "top top",
-          end: () => `+=${sectionHeight}`,
-          scrub: 1,
-          onUpdate: (self) => {
-            const progress = self.progress;
-            const {
-              MEET_POINT_X,
-              MEET_POINT_Y,
-              ENTRY_DURATION,
-              PAUSE_DURATION,
-              EXIT_DURATION,
-              CAMERA_DISTANCE,
-              CAMERA_FOV,
-            } = ANIMATION_SETTINGS;
+      const trigger = ScrollTrigger.create({
+        trigger: section,
+        start: "top top",
+        end: () => `+=${sectionHeight}`,
+        scrub: 1,
+        pin: index !== sections.length - 1, // Don't pin the last section
+        pinSpacing: false,
+        onUpdate: (self) => {
+          const progress = self.progress;
+          const movement = ANIMATION_SETTINGS.SECTION_MOVEMENTS[index];
+          if (movement) {
+            const x = gsap.utils.interpolate(
+              movement.x,
+              movement.x +
+                (ANIMATION_SETTINGS.SECTION_MOVEMENTS[index + 1]?.x || 0),
+              progress
+            );
+            const y = gsap.utils.interpolate(
+              movement.y,
+              movement.y +
+                (ANIMATION_SETTINGS.SECTION_MOVEMENTS[index + 1]?.y || 0),
+              progress
+            );
+            eventSystem.emit("updateElementPosition", { x, y });
+          }
+        },
+      });
 
-            // 카메라 시야각을 고려한 뷰포트 크기 계산
-            const vFov = (CAMERA_FOV * Math.PI) / 180;
-            const viewportHeight = 2 * Math.tan(vFov / 2) * CAMERA_DISTANCE;
-            const viewportWidth =
-              viewportHeight * (window.innerWidth / window.innerHeight);
-
-            const meetPointX = MEET_POINT_X * viewportWidth - viewportWidth / 2;
-            const meetPointY =
-              -MEET_POINT_Y * viewportHeight + viewportHeight / 2;
-
-            let x, y, phase;
-            if (progress < ENTRY_DURATION) {
-              // 진입
-              phase = "entry";
-              x = gsap.utils.interpolate(
-                viewportWidth / 2,
-                meetPointX,
-                progress / ENTRY_DURATION
-              );
-              y = gsap.utils.interpolate(
-                viewportHeight / 2,
-                meetPointY,
-                progress / ENTRY_DURATION
-              );
-            } else if (progress < ENTRY_DURATION + PAUSE_DURATION) {
-              // 정지
-              phase = "pause";
-              x = meetPointX;
-              y = meetPointY;
-            } else {
-              // 퇴장
-              phase = "exit";
-              const exitProgress =
-                (progress - ENTRY_DURATION - PAUSE_DURATION) / EXIT_DURATION;
-              x = gsap.utils.interpolate(
-                meetPointX,
-                -viewportWidth / 2,
-                exitProgress
-              );
-              y = meetPointY;
-            }
-
-            eventSystem.emit("updateElementPosition", {
-              x,
-              y,
-              progress,
-              phase,
-            });
-          },
-        });
-        triggers.push(trigger);
-      }
+      triggers.push(trigger);
     });
 
     setTotalHeight(totalScrollHeight);
@@ -667,6 +624,7 @@ export const ScrollTrig = forwardRef(({ children }, ref) => {
       triggers.forEach((trigger) => trigger.kill());
     };
   }, []);
+
   const memoizedChildren = useMemo(
     () =>
       React.Children.map(children, (child, index) => (
@@ -1017,24 +975,19 @@ export const OtherComponent = () => (
 
 const ANIMATION_SETTINGS = {
   // 요소가 멈추는 화면 상의 x 위치 (화면 너비의 비율, 0~1)
+  MEET_POINT_X: 0.3,
 
   // 요소가 멈추는 화면 상의 y 위치 (화면 높이의 비율, 0~1)
-  MEET_POINT_X: 0.3,
-  MEET_POINT_Y: 0.3,
-  ENTRY_DURATION: 0.3,
-  PAUSE_DURATION: 0.4,
-  EXIT_DURATION: 0.3,
-  CAMERA_DISTANCE: 10,
-  CAMERA_FOV: 75, // 카메라의 시야각 (degree)
-  VIEWPORT_WIDTH: 5,
-  VIEWPORT_HEIGHT: 5,
+  MEET_POINT_Y: 0.5,
   Y_OFFSET: -100, // 픽셀 단위로 위로 이동
   // 요소가 MEET_POINT에 도달하는 데 걸리는 시간 (초)
   TIME_TO_MEET: 2,
 
   // 요소가 MEET_POINT에서 멈추는 시간 (초)
+  PAUSE_DURATION: 1,
 
   // 요소가 MEET_POINT에서 화면을 벗어나는 데 걸리는 시간 (초)
+  TIME_TO_EXIT: 2,
 
   // 모바일과 데스크톱을 구분하는 화면 너비 (픽셀 단위)
   BREAKPOINT: 768,
@@ -1060,10 +1013,9 @@ const STYLES = {
     zIndex: 1000,
   },
   DOM_ELEMENT: {
-    width: "30px",
-    height: "30px",
+    width: "50px",
+    height: "50px",
     background: "red",
-    borderRadius: "50%",
   },
   CURRENT_ELEMENT: {
     width: "30px",
@@ -1125,95 +1077,6 @@ const DomElementWrapper = styled.div`
   left: 0;
   top: 100px; // 원하는 상단 여백
 `;
-const convertToScreenCoordinates = (x, y, camera, canvas) => {
-  const vector = new THREE.Vector3(x, y, 0);
-  vector.project(camera);
-
-  return {
-    x: ((vector.x + 1) / 2) * canvas.width,
-    y: ((-vector.y + 1) / 2) * canvas.height,
-  };
-};
-export const ThreeDElement = () => {
-  const meshRef = useRef();
-  const { camera, size } = useThree();
-
-  useEffect(() => {
-    const updatePosition = ({ x, y, phase, progress }) => {
-      if (meshRef.current) {
-        const {
-          VIEWPORT_WIDTH,
-          VIEWPORT_HEIGHT,
-          MEET_POINT_X,
-          MEET_POINT_Y,
-          ENTRY_DURATION,
-          PAUSE_DURATION,
-          EXIT_DURATION,
-        } = ANIMATION_SETTINGS;
-
-        // 시작 위치 (오른쪽 상단)
-        const startX = VIEWPORT_WIDTH / 2;
-        const startY = VIEWPORT_HEIGHT / 2;
-
-        // 만나는 지점
-        const meetX = (MEET_POINT_X - 0.5) * VIEWPORT_WIDTH;
-        const meetY = (0.5 - MEET_POINT_Y) * VIEWPORT_HEIGHT;
-
-        // 끝 위치 (왼쪽)
-        const endX = -VIEWPORT_WIDTH / 2;
-
-        let newX, newY;
-
-        if (progress < ENTRY_DURATION) {
-          // 진입 단계
-          const t = progress / ENTRY_DURATION;
-          newX = gsap.utils.interpolate(startX, meetX, t);
-          newY = gsap.utils.interpolate(startY, meetY, t);
-        } else if (progress < ENTRY_DURATION + PAUSE_DURATION) {
-          // 정지 단계
-          newX = meetX;
-          newY = meetY;
-        } else {
-          // 퇴장 단계
-          const t =
-            (progress - ENTRY_DURATION - PAUSE_DURATION) / EXIT_DURATION;
-          newX = gsap.utils.interpolate(meetX, endX, t);
-          newY = meetY;
-        }
-
-        gsap.to(meshRef.current.position, {
-          x: newX,
-          y: newY,
-          duration: phase === "pause" ? 0 : 0.1,
-          ease: "none",
-        });
-
-        // 화면 좌표로 변환하여 이벤트 발생
-        const screenCoords = convertToScreenCoordinates(newX, newY, camera, {
-          width: size.width,
-          height: size.height,
-        });
-        eventSystem.emit("updateDomElementPosition", screenCoords);
-      }
-    };
-    eventSystem.on("updateElementPosition", updatePosition);
-    return () => eventSystem.off("updateElementPosition", updatePosition);
-  }, [camera, size]);
-
-  return (
-    <mesh
-      ref={meshRef}
-      position={[
-        ANIMATION_SETTINGS.VIEWPORT_WIDTH / 2,
-        ANIMATION_SETTINGS.VIEWPORT_HEIGHT / 2,
-        0,
-      ]}
-    >
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color="blue" />
-    </mesh>
-  );
-};
 
 export const DomElement = () => {
   const domRef = useRef();
@@ -1227,35 +1090,60 @@ export const DomElement = () => {
     if (!sectionRefs || sectionRefs.length < 5) return;
 
     const section5 = sectionRefs[4];
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const elementWidth = domRef.current.offsetWidth;
+    const elementHeight = domRef.current.offsetHeight;
 
-    const updatePosition = ({ x, y }) => {
-      gsap.to(domRef.current, {
-        x: x,
-        y: y,
-        duration: 0.1,
-        ease: "none",
-      });
+    // MEET_POINT 위치 계산
+    const calculateYPosition = () => {
+      const windowHeight = window.innerHeight;
+      const elementHeight = domRef.current.offsetHeight;
+      const desiredTopSpace = 100; // 원하는 상단 여백
+
+      return desiredTopSpace + elementHeight / 2;
     };
+    const meetPointX = windowWidth * ANIMATION_SETTINGS.MEET_POINT_X;
+    const meetPointY = calculateYPosition();
 
-    eventSystem.on("updateDomElementPosition", updatePosition);
+    gsap.set(domRef.current, { x: windowWidth + elementWidth, y: meetPointY });
+
+    const totalDuration =
+      ANIMATION_SETTINGS.TIME_TO_MEET +
+      ANIMATION_SETTINGS.PAUSE_DURATION +
+      ANIMATION_SETTINGS.TIME_TO_EXIT;
 
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: section5,
         start: "top top",
-        end: "bottom bottom",
+        end: `+=${totalDuration * 100}%`,
         scrub: 1,
+        markers: true,
       },
     });
 
-    tl.to(domRef.current, { autoAlpha: 1, duration: 0.1 });
+    tl.to(domRef.current, {
+      x: meetPointX,
+      duration: ANIMATION_SETTINGS.TIME_TO_MEET,
+      ease: "power1.inOut",
+    })
+      .to(domRef.current, {
+        x: meetPointX,
+        duration: ANIMATION_SETTINGS.PAUSE_DURATION,
+        ease: "none",
+      })
+      .to(domRef.current, {
+        x: -elementWidth,
+        duration: ANIMATION_SETTINGS.TIME_TO_EXIT,
+        ease: "power1.in",
+      });
 
     objectTimeline.add(tl, 0);
 
     return () => {
       tl.kill();
       gsap.killTweensOf(domRef.current);
-      eventSystem.off("updateDomElementPosition", updatePosition);
     };
   }, [scrollTriggerRef, objectTimeline]);
 
@@ -1265,44 +1153,55 @@ export const DomElement = () => {
       style={{
         ...STYLES.FIXED_ELEMENT,
         ...STYLES.DOM_ELEMENT,
-        position: "fixed",
         left: 0,
-        top: 0,
-        transform: "none",
-        opacity: 0,
       }}
     >
       redDomElement
     </DomElementWrapper>
   );
 };
+export const ThreeDElement = () => {
+  const meshRef = useRef();
+
+  useEffect(() => {
+    const updatePosition = (position) => {
+      if (meshRef.current) {
+        meshRef.current.position.x = position.x;
+        meshRef.current.position.y = position.y;
+      }
+    };
+    eventSystem.on("updateElementPosition", updatePosition);
+    return () => eventSystem.off("updateElementPosition", updatePosition);
+  }, []);
+
+  return (
+    <mesh ref={meshRef} position={[0, 0, 0]}>
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial color="blue" />
+    </mesh>
+  );
+};
+
 export const CurrentDomElement = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
-    const updatePosition = ({ x, y, phase }) => {
-      const newX = gsap.utils.mapRange(
+    const updatePosition = (newPosition) => {
+      const viewportX = gsap.utils.mapRange(
+        -ANIMATION_SETTINGS.VIEWPORT_WIDTH / 2,
+        ANIMATION_SETTINGS.VIEWPORT_WIDTH / 2,
         0,
         window.innerWidth,
-        0,
-        window.innerWidth,
-        x
+        newPosition.x
       );
-      const newY = gsap.utils.mapRange(
-        0,
+      const viewportY = gsap.utils.mapRange(
+        -ANIMATION_SETTINGS.VIEWPORT_HEIGHT / 2,
+        ANIMATION_SETTINGS.VIEWPORT_HEIGHT / 2,
         window.innerHeight,
         0,
-        window.innerHeight,
-        y
+        newPosition.y
       );
-
-      gsap.to(setPosition, {
-        x: newX,
-        y: newY,
-        duration: phase === "pause" ? 0 : 0.1,
-        ease: "none",
-        onUpdate: () => setPosition({ x: newX, y: newY }),
-      });
+      setPosition({ x: viewportX, y: viewportY });
     };
     eventSystem.on("updateElementPosition", updatePosition);
     return () => eventSystem.off("updateElementPosition", updatePosition);
@@ -1320,6 +1219,107 @@ export const CurrentDomElement = () => {
     </div>
   );
 };
+const useSharedAnimation = (scrollTriggerRef) => {
+  const positionRef = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!scrollTriggerRef?.current) return;
+
+    const sectionRefs = scrollTriggerRef.current.getSectionRefs();
+    if (
+      !sectionRefs ||
+      sectionRefs.length < ANIMATION_SETTINGS.SECTION_MOVEMENTS.length
+    )
+      return;
+
+    const tl = gsap.timeline();
+
+    ANIMATION_SETTINGS.SECTION_MOVEMENTS.forEach((movement, index) => {
+      tl.to(positionRef.current, {
+        x: movement.x,
+        y: movement.y,
+        duration: movement.duration,
+        ease: "power1.inOut",
+        scrollTrigger: {
+          trigger: sectionRefs[index],
+          start: "top bottom",
+          end: "bottom top",
+          scrub: 1,
+        },
+        onUpdate: () => {
+          const viewportX = gsap.utils.mapRange(
+            -ANIMATION_SETTINGS.VIEWPORT_WIDTH / 2,
+            ANIMATION_SETTINGS.VIEWPORT_WIDTH / 2,
+            0,
+            window.innerWidth,
+            positionRef.current.x
+          );
+          const viewportY = gsap.utils.mapRange(
+            -ANIMATION_SETTINGS.VIEWPORT_HEIGHT / 2,
+            ANIMATION_SETTINGS.VIEWPORT_HEIGHT / 2,
+            0,
+            window.innerHeight,
+            positionRef.current.y
+          );
+          eventSystem.emit("updatePosition", {
+            x: viewportX,
+            y: viewportY,
+            raw: positionRef.current,
+          });
+        },
+      });
+    });
+
+    return () => {
+      tl.kill();
+      ScrollTrigger.getAll().forEach((t) => t.kill());
+    };
+  }, [scrollTriggerRef]);
+
+  return positionRef;
+};
+const useSharedElementAnimation = (scrollTriggerRef) => {
+  const positionRef = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!scrollTriggerRef?.current) return;
+
+    const sectionRefs = scrollTriggerRef.current.getSectionRefs();
+    if (
+      !sectionRefs ||
+      sectionRefs.length < ANIMATION_SETTINGS.SECTION_MOVEMENTS.length
+    )
+      return;
+
+    const tl = gsap.timeline();
+
+    ANIMATION_SETTINGS.SECTION_MOVEMENTS.forEach((movement, index) => {
+      tl.to(positionRef.current, {
+        x: movement.x,
+        y: movement.y,
+        duration: movement.duration,
+        ease: "power1.inOut",
+        scrollTrigger: {
+          trigger: sectionRefs[index],
+          start: "top bottom",
+          end: "bottom top",
+          scrub: 1,
+        },
+        onUpdate: () => {
+          eventSystem.emit("updateElementPosition", positionRef.current);
+        },
+      });
+    });
+
+    return () => {
+      tl.kill();
+      ScrollTrigger.getAll().forEach((t) => t.kill());
+    };
+  }, [scrollTriggerRef]);
+
+  return positionRef;
+};
+
 const MainApp = () => {
   const scrollTriggerRef = useRef();
   const [totalPages, setTotalPages] = useState(1);
@@ -1347,11 +1347,8 @@ const MainApp = () => {
         <CanvasContainer>
           <Canvas
             shadows
-            camera={{
-              position: [0, 0, ANIMATION_SETTINGS.CAMERA_DISTANCE],
-              fov: ANIMATION_SETTINGS.CAMERA_FOV,
-            }}
-            gl={{ antialias: true }}
+            camera={{ position: [0, 0, 10] }}
+            gl={{ antialias: false }}
             style={STYLES.CANVAS}
           >
             <ScrollControls pages={totalPages} damping={2}>

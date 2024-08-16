@@ -23,14 +23,6 @@ export default function Home() {
             </Button>
             <Button
               component={Link}
-              href="/R3f01"
-              variant="contained"
-              sx={{ ml: 2 }}
-            >
-              3D
-            </Button>
-            <Button
-              component={Link}
               href="/Motion"
               variant="contained"
               sx={{ ml: 2 }}

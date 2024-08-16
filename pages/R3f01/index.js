@@ -3,7 +3,7 @@ import React, { Suspense, lazy, useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Scroll, ScrollControls } from "@react-three/drei";
 import styled from "styled-components";
-import ScrollTextWrap from "./Animation/(ObjText)/ScrollTextWrap";
+import ScrollTextWrap from "./Scenes/(ObjText)/ScrollTextWrap";
 import TimelineSection from "./Object/(Text)/TimelineSectionWrap/TimelineSection";
 import ScrollTrig from "./Canvas/ScrollTrig";
 
@@ -69,3 +69,6 @@ function MainApp() {
 }
 
 export default MainApp;
+
+
+//
