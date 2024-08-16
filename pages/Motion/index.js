@@ -153,138 +153,42 @@ const SectionDiv = styled.div`
   font-size: 24px;
 `;
 
-export const useFloatingAnimation = () => {
-  const time = useRef(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const animationsRef = useRef(new Map());
+export const useFloatingAnimation = (options = {}) => {
+  const {
+    yOffset = 10,
+    duration = 2,
+    ease = "sine.inOut",
+    is3D = false,
+  } = options;
 
-  const createFloatingAnimation = useCallback(
-    (element, options = {}) => {
-      const {
-        yOffset = 10,
-        duration = 2,
-        ease = "sine.inOut",
-        amplitude = 0.1,
-        frequency = 1,
-        is3D = false,
-        customEase,
-        responsiveScale = 1,
-      } = options;
-
+  const startFloating = useCallback(
+    (element) => {
       if (!element) return null;
-
-      const animateFloat = (delta) => {
-        if (isPaused) return 0;
-        time.current += delta;
-        return Math.sin(time.current * frequency) * amplitude * responsiveScale;
-      };
 
       if (is3D) {
         return (delta) => {
-          element.position.y += animateFloat(delta);
+          element.position.y += Math.sin(Date.now() * 0.001) * yOffset * 0.1;
         };
       } else {
-        const easingFunction = customEase || ease;
         return gsap.to(element, {
-          y: `+=${yOffset * responsiveScale}`,
+          y: `+=${yOffset}`,
           duration,
           repeat: -1,
           yoyo: true,
-          ease: easingFunction,
-          paused: isPaused,
+          ease,
         });
       }
     },
-    [isPaused]
+    [yOffset, duration, ease, is3D]
   );
 
-  const stopFloating = useCallback((id) => {
-    const animationData = animationsRef.current.get(id);
-    if (!animationData) return;
-
-    const { animation, element, options } = animationData;
-    if (options.is3D) {
-      element.position.y = 0;
-    } else {
+  const stopFloating = useCallback((animation) => {
+    if (animation && typeof animation.kill === "function") {
       animation.kill();
-      gsap.to(element, { y: 0, duration: 0.3 });
     }
-    animationsRef.current.delete(id);
   }, []);
 
-  const startFloating = useCallback(
-    (element, options = {}) => {
-      const animation = createFloatingAnimation(element, options);
-      const id = Math.random().toString(36).substr(2, 9);
-      animationsRef.current.set(id, { animation, element, options });
-      return id;
-    },
-    [createFloatingAnimation]
-  );
-
-  const pauseAllAnimations = useCallback(() => {
-    setIsPaused(true);
-    animationsRef.current.forEach(({ animation, options }) => {
-      if (!options.is3D) {
-        animation.pause();
-      }
-    });
-  }, []);
-
-  const resumeAllAnimations = useCallback(() => {
-    setIsPaused(false);
-    animationsRef.current.forEach(({ animation, options }) => {
-      if (!options.is3D) {
-        animation.resume();
-      }
-    });
-  }, []);
-
-  const synchronizeAnimations = useCallback(() => {
-    const now = gsap.ticker.time;
-    animationsRef.current.forEach(({ animation }) => {
-      if (animation.play) {
-        animation.play(now);
-      }
-    });
-  }, []);
-
-  const updateResponsiveness = useCallback(
-    (scale) => {
-      animationsRef.current.forEach(({ animation, element, options }) => {
-        const newOptions = { ...options, responsiveScale: scale };
-        if (options.is3D) {
-          // 3D 요소의 경우 새로운 스케일을 적용한 애니메이션을 생성
-          animation = createFloatingAnimation(element, newOptions);
-        } else {
-          // DOM 요소의 경우 GSAP 애니메이션 업데이트
-          animation.vars.y = `+=${options.yOffset * scale}`;
-          animation.invalidate().restart();
-        }
-      });
-    },
-    [createFloatingAnimation]
-  );
-
-  // 메모리 누수 방지를 위한 정리 함수
-  useEffect(() => {
-    return () => {
-      animationsRef.current.forEach(({ animation, options }) => {
-        if (!options.is3D && animation.kill) {
-          animation.kill();
-        }
-      });
-    };
-  }, []);
-
-  return {
-    startFloating,
-    stopFloating,
-    pauseAllAnimations,
-    resumeAllAnimations,
-    synchronizeAnimations,
-    updateResponsiveness,
-  };
+  return { startFloating, stopFloating };
 };
 export const generatePositions = (photos, numPhotos) => {
   let photoArray = Array.isArray(photos)
@@ -994,18 +898,22 @@ const DomAnimationSection = () => {
 };
 
 export const Light = () => (
-  <directionalLight
-    castShadow
-    position={[0, 10, 20]}
-    intensity={0.9}
-    shadow-mapSize-width={1024}
-    shadow-mapSize-height={1024}
-    shadow-camera-far={50}
-    shadow-camera-left={-10}
-    shadow-camera-right={10}
-    shadow-camera-top={10}
-    shadow-camera-bottom={-10}
-  />
+  <>
+    <ambientLight intensity={0.5} />
+    <pointLight position={[10, 10, 10]} />
+    <directionalLight
+      castShadow
+      position={[0, 10, 20]}
+      intensity={0.9}
+      shadow-mapSize-width={1024}
+      shadow-mapSize-height={1024}
+      shadow-camera-far={50}
+      shadow-camera-left={-10}
+      shadow-camera-right={10}
+      shadow-camera-top={10}
+      shadow-camera-bottom={-10}
+    />
+  </>
 );
 
 export const OtherComponent = () => (
@@ -1049,7 +957,6 @@ const ANIMATION_SETTINGS = {
     { x: -2.5, y: 0, duration: 1 },
   ],
   VIEWPORT_WIDTH: 5,
-  VIEWPORT_HEIGHT: 5,
 };
 
 const STYLES = {
@@ -1125,15 +1032,7 @@ const DomElementWrapper = styled.div`
   left: 0;
   top: 100px; // 원하는 상단 여백
 `;
-const convertToScreenCoordinates = (x, y, camera, canvas) => {
-  const vector = new THREE.Vector3(x, y, 0);
-  vector.project(camera);
 
-  return {
-    x: ((vector.x + 1) / 2) * canvas.width,
-    y: ((-vector.y + 1) / 2) * canvas.height,
-  };
-};
 export const ThreeDElement = () => {
   const meshRef = useRef();
   const { camera, size } = useThree();
@@ -1199,7 +1098,15 @@ export const ThreeDElement = () => {
     eventSystem.on("updateElementPosition", updatePosition);
     return () => eventSystem.off("updateElementPosition", updatePosition);
   }, [camera, size]);
+  const convertToScreenCoordinates = (x, y, camera, canvas) => {
+    const vector = new THREE.Vector3(x, y, 0);
+    vector.project(camera);
 
+    return {
+      x: ((vector.x + 1) / 2) * canvas.width,
+      y: ((-vector.y + 1) / 2) * canvas.height,
+    };
+  };
   return (
     <mesh
       ref={meshRef}
@@ -1320,6 +1227,9 @@ export const CurrentDomElement = () => {
     </div>
   );
 };
+
+// const LazyPhotoSection = lazy(() => import('./PhotoSection'));
+// const LazyTimelineSection = lazy(() => import('./TimelineSection'));
 const MainApp = () => {
   const scrollTriggerRef = useRef();
   const [totalPages, setTotalPages] = useState(1);
